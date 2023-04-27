@@ -1,0 +1,161 @@
+# Importando as bibliotecas matplotlib, pandas e numpy
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Lista de caminhos dos arquivos Excel que serão combinados
+filenames = [
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202201.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202204.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202207.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202208.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202209.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202210.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202211.xlsx",
+    "C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/202212.xlsx"
+]
+
+# Cria um dataframe vazio para combinar os dados dos arquivos Excel
+combined_df = pd.DataFrame()
+
+# Itera sobre cada arquivo Excel, lê-o e concatena os dados no dataframe vazio
+for f in filenames:
+    df = pd.read_excel(f)
+    combined_df = pd.concat([combined_df, df], ignore_index=True)
+
+# Salva o dataframe combinado em um arquivo Excel
+combined_df.to_excel("C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/combined.xlsx", index=False)
+
+# Lê o arquivo Excel combinado e armazena seus dados em um dataframe
+df = pd.read_excel("C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/combined.xlsx")
+
+# Cria um novo dataframe com as colunas desnecessárias removidas
+df1 = df.drop(labels=["CNAE2.0 Empregador", "Data Acidente.1","CNAE2.0 Empregador.1", "Data Acidente.2", "CNPJ/CEI Empregador", "UF Munic. Empregador", "Data Despacho Benefício", "Espécie do benefício", "Filiação Segurado", "Munic Empr", "Natureza da Lesão", "Origem de Cadastramento CAT", "Tipo do Acidente", "Data Nascimento", "Data Emissão CAT", "Parte Corpo Atingida", "Agente  Causador  Acidente", "CBO", "Emitente CAT" ], axis=1)
+
+# Substitui valores específicos por "Não Preenchido" em todo o dataframe
+df1.replace(['{ñ class}                                    ','000000-Não Informado                         ', '{ñ class}          ', '{ñ ', '000000-Ignorado                          ','{ñ class', 'Zerado          ', '{ñ class}       '], 'Não Preenchido', inplace=True)
+
+# Ordena o dataframe pelos valores de "Data Acidente", "UF Munic. Acidente" e "Sexo"
+df1.sort_values(by=["Data Acidente", "UF  Munic.  Acidente", "Sexo"], inplace=True, ascending=True)
+
+# Salva o DataFrame em um arquivo Excel
+df1.to_excel("C:/Users/leonardoalves.SISTEMAFIEG/Desktop/Pos/dadostratados.xlsx", index=False)
+
+# Inicializa um dicionário para armazenar a frequência de cada letra
+freq_letras = {}
+
+print ('A Letra e quantidade de CID realizado no ano de 2022:\n')
+# Percorre todas as entradas na coluna "CID-10"
+for cid in df['CID-10']:
+    # Obtém a primeira letra da string e converte para maiúscula
+    letra = cid[0].upper()
+    
+    # Verifica se a letra é uma letra do alfabeto
+    if letra.isalpha():
+        # Adiciona um ao contador correspondente para essa letra
+        freq_letras[letra] = freq_letras.get(letra, 0) + 1
+
+# Ordena as chaves do dicionário em ordem alfabética
+letras_ordenadas = sorted(freq_letras.keys())
+
+# Imprime a frequência das letras do alfabeto em ordem alfabética
+for letra in letras_ordenadas:
+    print(f"Letra: {letra} - {freq_letras[letra]}")
+
+# Remove as colunas "Sexo" e "Indica Óbito Acidente" do DataFrame
+df2 = df1.drop(labels=[ "Sexo", "Indica Óbito Acidente" ], axis=1)
+
+# Agrupa as entradas do DataFrame por data e UF do acidente, e conta as ocorrências
+agrupado = df2.groupby(['Data Acidente', 'UF  Munic.  Acidente']).count()
+
+# Reseta o índice do dataframe agrupado para obter uma coluna única de datas
+agrupado = agrupado.reset_index()
+
+# Renomeia as colunas do dataframe agrupado
+novo_nome_colunas = ['Data do Acidente', 'UF Munic. Acidente', 'Quantidade de CAT']
+agrupado.columns = novo_nome_colunas
+
+# Imprime o dataframe agrupado
+agrupado
+
+# Inicializa algumas strings para contar o número de ocorrências
+word_obito = "Sim"
+word_nao_obito = "Não"
+word_nao_preenchido = "Não Preenchido"
+word_feminino = "Feminino"
+word_masculino = "Masculino"
+word_indeterminado = "Indeterminado"
+word_nao_informado = "Não Informado"
+
+# Conta o número de ocorrências de cada tipo de óbito
+count_obito = df1['Indica Óbito Acidente'].str.count(word_obito).sum()
+count_nao_obito = df1['Indica Óbito Acidente'].str.count(word_nao_obito).sum()
+count_nao_preenchido = df1['Indica Óbito Acidente'].str.count(word_nao_preenchido).sum()
+
+# Imprime o número de ocorrências de cada tipo de óbito
+print("\nA quantidade de óbitos decorrentes de acidentes de trabalho:\n\n Óbitos: {}\n Não Óbitos: {}\n Não Informado: {}\n\n".format(count_obito, count_nao_obito, count_nao_preenchido))
+
+# Conta o número de pessoas de cada sexo
+count_feminino = df1['Sexo'].str.count(word_feminino).sum()
+count_masculino = df1['Sexo'].str.count(word_masculino).sum()
+count_indeterminado = df1['Sexo'].str.count(word_indeterminado).sum()
+count_nao_informado = df1['Sexo'].str.count(word_nao_informado).sum()
+
+print("Sexo dos Envolvidos:\n\n Feminino: {}\n Masculino: {}\n Indeterminados: {}\n Não preenchido: {}".format(count_feminino, count_masculino, count_indeterminado, count_nao_informado))
+
+# Dados
+labels = ['Feminino', 'Masculino', 'Indeterminados', 'Não preenchido']
+sizes = [228449, 432876, 6, 4038]
+
+# Cores
+colors = ['#ff9999','#66b3ff','#99ff99','#ffcc99']
+
+# Posição das colunas
+x_pos = np.arange(len(labels))
+
+# Altura das colunas
+heights = sizes
+
+# Criando a figura
+fig, ax = plt.subplots()
+
+# Plotando as colunas
+ax.bar(x_pos, heights, color=colors)
+
+# Adicionando rótulos
+ax.set_xlabel('Sexo')
+ax.set_ylabel('Quantidade')
+ax.set_xticks(x_pos)
+ax.set_xticklabels(labels)
+
+# Adicionando título
+ax.set_title('Sexo dos Envolvidos')
+
+# Mostrando gráfico
+plt.show()
+
+
+# Dados
+labels = ['Óbitos', 'Não Óbitos', 'Não Informado']
+sizes = [count_obito, count_nao_obito, count_nao_preenchido]
+
+# Cores
+colors = ['#ff9999','#66b3ff','#99ff99']
+
+# Espaço entre as fatias
+explode = (0.1, 0.1, 0.1)
+
+# Criando a figura
+fig, ax = plt.subplots()
+
+# Plotando o gráfico de pizza
+ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors, explode=explode)
+
+# Adicionando legenda
+ax.legend(loc='best')
+
+# Adicionando legenda embaixo
+ax.legend(labels, loc='upper center', bbox_to_anchor=(0.5, -0.1))
+
+# Mostrando gráfico
+plt.show()
